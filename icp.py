@@ -4,6 +4,7 @@ import scipy
 import open3d as o3d
 from scipy.spatial.transform import Rotation as R
 from copy import deepcopy
+from time import time
 
 args = None
 
@@ -89,6 +90,8 @@ def main(args):
 
     o3d.visualization.draw_geometries([a, b])
 
+    start_time = time()
+
     if args.kd_tree:
         kd_tree = scipy.spatial.KDTree(np.array(b.points) - np.array(b.points).mean(axis=0))
 
@@ -108,9 +111,13 @@ def main(args):
         elif "lsq" in args.method:
             a = least_squares_icp(a, b, idx, args)
 
-        print(np.sum(np.linalg.norm(np.array(a.points) - np.array(b.points))))
+        print("\r", np.sum(np.linalg.norm(np.array(a.points) - np.array(b.points))), end=' ' * 10)
+    print("\n")
     o3d.visualization.draw_geometries([a, b])
     print(np.isclose(np.array(a.points), np.array(b.points)).all())
+
+    end_time = time()
+    print("Time taken:", end_time - start_time)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
