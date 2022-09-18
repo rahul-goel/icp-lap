@@ -7,10 +7,12 @@ from copy import deepcopy
 
 args = None
 
-def gen_pc(n):
-    pc = o3d.io.read_point_cloud("./bunny.pcd")
-    mesh = o3d.io.read_triangle_mesh("./bunny.ply")
-    pc = mesh.sample_points_uniformly(number_of_points=1000)
+def get_pc(args):
+    if args.bunny:
+        mesh = o3d.io.read_triangle_mesh("./bunny.ply")
+        pc = mesh.sample_points_uniformly(number_of_points=args.num)
+    elif args.spot:
+        pc = o3d.io.read_point_cloud("./spot.xyz")
     return pc
 
 def random_transform(pc, trans):
@@ -55,10 +57,10 @@ def least_squares_icp(pc_a_full, pc_b_full, idx, args):
     def loss_plane(params):
         r = R.from_quat(params[:4]).as_matrix()
         t = params[4:].reshape(1, 3)
-        bn = -np.array(pc_b_full.normals)[idx]
-        p = b[idx] - (a @ r + t)
+        bn = np.array(pc_b_full.normals)[idx]
+        p = (a @ r + t) - b[idx]
         d = np.sum(p * bn, axis=1)
-        return np.sum(d ** 2)
+        return d
 
     if args.method == "lsq_point":
         sol = scipy.optimize.least_squares(loss_point, params)
@@ -78,7 +80,7 @@ def least_squares_icp(pc_a_full, pc_b_full, idx, args):
 def main(args):
     # a moves, b is fixed
 
-    a = gen_pc(args.num)
+    a = get_pc(args)
     a.paint_uniform_color(np.array([1, 0, 0]))
     b = random_transform(deepcopy(a), args.trans)
     b.paint_uniform_color(np.array([0, 0, 1]))
@@ -118,6 +120,8 @@ if __name__ == "__main__":
     parser.add_argument("--trans", type=float, default=100.0)
     parser.add_argument("--iter", type=int, default=100)
     parser.add_argument("--kd-tree", action=argparse.BooleanOptionalAction)
+    parser.add_argument("--spot", action=argparse.BooleanOptionalAction)
+    parser.add_argument("--bunny", action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
     main(args)
